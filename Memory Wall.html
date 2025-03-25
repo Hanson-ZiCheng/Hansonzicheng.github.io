@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>家庭照片墙</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background: #f5e6d3 url('data:image/svg+xml,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.005" numOctaves="3"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.4"/></svg>');
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            color: #6b5d45;
+            margin: 20px 0;
+        }
+
+        #upload-container {
+            text-align: center;
+            margin: 20px;
+        }
+
+        #uploader {
+            display: none;
+        }
+
+        .custom-upload-btn {
+            background: #8b7355;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid #6b5d45;
+        }
+
+        #photo-wall {
+            position: relative;
+            min-height: 600px;
+            margin: 20px auto;
+            max-width: 1200px;
+        }
+
+        .photo {
+            position: absolute;
+            cursor: move;
+            transition: all 0.3s;
+            border: 5px solid white;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+            max-width: 200px;
+        }
+
+        .photo:hover {
+            transform: scale(1.05);
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    <h1>家庭回忆时光墙</h1>
+    
+    <div id="upload-container">
+        <label for="uploader" class="custom-upload-btn">📷 上传照片</label>
+        <input type="file" id="uploader" multiple accept="image/*">
+    </div>
+
+    <div id="photo-wall"></div>
+
+    <script>
+        const uploader = document.getElementById('uploader');
+        const photoWall = document.getElementById('photo-wall');
+
+        // 图片上传功能
+        uploader.addEventListener('change', function(e) {
+            const files = e.target.files;
+            for (let file of files) {
+                if (!file.type.startsWith('image/')) continue;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.className = 'photo';
+                    
+                    // 设置随机初始位置
+                    img.style.left = Math.random() * 80 + '%';
+                    img.style.top = Math.random() * 70 + '%';
+                    img.style.transform = `rotate(${Math.random() * 10 - 5}deg)`;
+                    
+                    // 限制最大尺寸
+                    img.onload = function() {
+                        if (this.width > 200) {
+                            this.style.width = '200px';
+                            this.style.height = 'auto';
+                        }
+                    }
+                    
+                    photoWall.appendChild(img);
+                    saveLayout();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 拖拽功能
+        let selectedElement = null;
+        let offset = { x: 0, y: 0 };
+
+        document.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+
+        function startDrag(e) {
+            if (e.target.classList.contains('photo')) {
+                selectedElement = e.target;
+                const rect = selectedElement.getBoundingClientRect();
+                offset = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+        }
+
+        function drag(e) {
+            if (selectedElement) {
+                const containerRect = photoWall.getBoundingClientRect();
+                let x = e.clientX - containerRect.left - offset.x;
+                let y = e.clientY - containerRect.top - offset.y;
+                
+                // 限制在容器范围内
+                x = Math.max(0, Math.min(x, containerRect.width - selectedElement.width));
+                y = Math.max(0, Math.min(y, containerRect.height - selectedElement.height));
+                
+                selectedElement.style.left = x + 'px';
+                selectedElement.style.top = y + 'px';
+            }
+        }
+
+        function endDrag() {
+            if (selectedElement) {
+                saveLayout();
+            }
+            selectedElement = null;
+        }
+
+        // 保存/加载布局
+        function saveLayout() {
+            const photos = Array.from(document.querySelectorAll('.photo')).map(img => ({
+                src: img.src,
+                style: img.style.cssText
+            }));
+            localStorage.setItem('familyPhotos', JSON.stringify(photos));
+        }
+
+        window.onload = function() {
+            const saved = localStorage.getItem('familyPhotos');
+            if (saved) {
+                JSON.parse(saved).forEach(photo => {
+                    const img = new Image();
+                    img.src = photo.src;
+                    img.className = 'photo';
+                    img.style.cssText = photo.style;
+                    photoWall.appendChild(img);
+                });
+            }
+        };
+
+        // 双击删除
+        document.addEventListener('dblclick', function(e) {
+            if (e.target.classList.contains('photo')) {
+                e.target.remove();
+                saveLayout();
+            }
+        });
+    </script>
+</body>
+</html>
